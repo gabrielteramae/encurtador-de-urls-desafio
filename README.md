@@ -74,10 +74,6 @@ HTTP/1.1 307 Temporary Redirect
 location: https://backendbrasil.com.br/
 ```
 
-## Deploy
-
-Pronto para subir no [Railway](https://railway.app): start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, variáveis `DATABASE_URL` e `URL_EXPIRATION_DAYS` configuráveis no serviço.
-
 ---
 
 © 2026 Gabriel Teramae Chan
