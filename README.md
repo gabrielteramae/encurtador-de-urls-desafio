@@ -3,7 +3,6 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 Solução para o desafio [`backend-br/desafios/url-shortener`](https://github.com/backend-br/desafios/blob/master/url-shortener/PROBLEM.md): encurtar URLs longas em códigos curtos, com persistência, expiração e redirecionamento.
 
