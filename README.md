@@ -48,8 +48,8 @@ app/
 ## Como rodar
 
 ```bash
-git clone <seu-repo>
-cd url-shortener-api
+git clone https://github.com/gabrielteramae/encurtador-de-urls-desafio.git
+cd encurtador-de-urls-desafio
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8004
 ```
