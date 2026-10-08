@@ -1,48 +1,41 @@
-# URL Shortener API
+# Encurtador de URLs — código aleatório com prazo
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0.35-D71F00)
 
-Solução para o desafio [`backend-br/desafios/url-shortener`](https://github.com/backend-br/desafios/blob/master/url-shortener/PROBLEM.md): encurtar URLs longas em códigos curtos, com persistência, expiração e redirecionamento.
+Encurta uma URL em um código de 6 caracteres (letras e dígitos) e redireciona enquanto não expirar. O prazo padrão é 30 dias (`URL_EXPIRATION_DAYS`). Não há contagem de clique nem alias escolhido pelo cliente.
 
-## Como funciona
+## Por que código aleatório
 
-```
-POST /shorten-url {"url": "https://exemplo.com"} -> gera codigo alfanumerico unico (5-10 chars)
-                                                   -> salva no banco com data de expiracao
-                                                   -> retorna {"url": "https://host/CODIGO"}
+| Escolha | Efeito |
+| --- | --- |
+| 6 caracteres aleatórios, unicidade checada no banco | Não entrega a quantidade de URLs. Em colisão, tenta de novo até 10 vezes e então estoura `RuntimeError`. |
+| Id sequencial na URL | Sem colisão, mas enumerável. |
+| Hash da URL | A mesma URL geraria o mesmo código. Este POST grava uma entrada nova a cada chamada. |
 
-GET /CODIGO -> busca no banco
-            -> nao existe ou expirado? 404
-            -> valido? redirect 307 para a URL original
-```
+A expiração é conferida no GET. Não existe job que apague linha vencida: o registro continua na tabela e a rota responde 404.
 
-## Regras implementadas
-
-| Requisito                        | Implementação                                       |
-|-------------------------------------|---------------------------------------------------------|
-| Código com 5-10 caracteres              | `code_generator.py`, tamanho padrão 6, ajustável            |
-| Apenas letras e números                  | Alfabeto restrito a `[a-zA-Z0-9]`                              |
-| Salvo no banco com prazo de validade       | Coluna `expires_at`, padrão 30 dias (`URL_EXPIRATION_DAYS`)      |
-| Redireciona para a URL original               | `RedirectResponse` (307) na rota `GET /{codigo}`                   |
-| 404 se não encontrada ou expirada               | Verificação de existência + comparação de `expires_at`                |
+`HttpUrl` recusa URL sem esquema e com usuário ou senha. O validador local recusa mais de 2048 caracteres.
 
 ## Stack
 
-- **FastAPI** para a API REST
-- **SQLAlchemy 2.0** + SQLite para persistência (trocar `DATABASE_URL` para Postgres/MySQL em produção)
-- Geração de código isolada em `code_generator.py`, com checagem de unicidade e retry
+- Python (sem versão pinada no repositório)
+- FastAPI 0.115.0 e Uvicorn 0.30.6
+- SQLAlchemy 2.0.35
+- SQLite em `sqlite:///./urls.db`, trocável por `DATABASE_URL`
 
 ## Estrutura
 
 ```
 app/
-├── main.py             # endpoints POST /shorten-url e GET /{codigo}
-├── models.py             # entidade ShortenedUrl
-├── schemas.py              # request/response (Pydantic)
-├── database.py               # conexao SQLAlchemy
-└── code_generator.py           # geracao de codigo curto unico
+├── main.py            # POST /shorten-url e GET /{short_code}
+├── code_generator.py  # alfabeto, tamanho 5–10, padrão 6
+├── models.py          # short_code, original_url, expires_at
+├── schemas.py
+└── database.py
+.env.example
+requirements.txt
 ```
 
 ## Como rodar
@@ -50,28 +43,26 @@ app/
 ```bash
 git clone https://github.com/gabrielteramae/encurtador-de-urls-desafio.git
 cd encurtador-de-urls-desafio
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8004
+export DATABASE_URL="${DATABASE_URL:-sqlite:///./urls.db}"
+export URL_EXPIRATION_DAYS="${URL_EXPIRATION_DAYS:-30}"
+uvicorn app.main:app --reload
 ```
 
-## Exemplo
+## Endpoints
 
-```bash
-curl -X POST http://localhost:8004/shorten-url \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://backendbrasil.com.br"}'
-```
-```json
-{"url": "http://localhost:8004/4HUi86"}
-```
+| Método | Rota | Resposta |
+| --- | --- | --- |
+| POST | `/shorten-url` | JSON `{"url":"<base>/<code>"}`. Corpo: `{"url":"https://..."}` |
+| GET | `/{short_code}` | 302 para a URL original, ou 404 se não existe ou expirou |
 
-```bash
-curl -i http://localhost:8004/4HUi86
-```
-```
-HTTP/1.1 307 Temporary Redirect
-location: https://backendbrasil.com.br/
-```
+Não há listagem nem DELETE.
+
+## O que não tem
+
+Não há testes automatizados, nem estatística de acesso, nem remoção das URLs vencidas.
 
 ---
 
